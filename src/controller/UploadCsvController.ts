@@ -1,51 +1,80 @@
-import multer from 'multer';
-import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { parse } from 'csv-parse';
 import fs from 'fs';
-import path from 'path';
-import upload from '../utils/multerConfig';
 
 const prisma = new PrismaClient();
 
-export const uploadCsv = async (req: Request, res: Response) => {
-  upload.single('csvFile')(req, res, async function (err: any) {
-    if (err instanceof multer.MulterError) {
-      return res.status(400).send('Erro ao fazer upload do arquivo.');
-    } else if (err) {
-      return res.status(500).send(err.message);
-    }
+export const uploadCsvController = async (req: any, res: any) => {
+  if (!req.file) {
+    return res.status(400).send('Nenhum arquivo CSV enviado.');
+  }
 
-    if (!req.file) {
-      return res.status(400).send('Nenhum arquivo CSV enviado.');
-    }
+  try {
+    const csvFile = req.file;
+    const parser = fs.createReadStream(csvFile.path).pipe(parse({ delimiter: ',', from_line: 2 })); // Ignora a primeira linha
+    let measurements = [];
 
-    try {
-      const csvFile = req.file;
-      const debuggerFilePath = path.join(__dirname, '../../debugger.csv');
-      fs.copyFileSync(csvFile.path, debuggerFilePath);
-      console.log(`Arquivo CSV salvo como debugger.csv na raiz do projeto.`);
-
-      const parser = fs.createReadStream(csvFile.path).pipe(parse({ delimiter: ',' }));
-      let measurements = [];
-
-      for await (const record of parser) {
-        const [equipmentId, timestamp, value] = record;
-        const measurement = await prisma.measurement.create({
-          data: {
-            value: parseFloat(value),
-            timestamp: new Date(timestamp),
-            equipmentId: equipmentId
-          }
+    for await (const record of parser) {
+        const [equipmentId, timestamp, value] = record;        
+        
+        // Verifica se o equipamento existe, caso contrário, cria-o
+        let equipment = await prisma.equipment.findUnique({
+          where: { id: equipmentId },
         });
-        measurements.push(measurement);
-      }
 
-      fs.unlinkSync(csvFile.path);
-      res.status(201).json({ message: 'Dados do CSV processados e armazenados com sucesso', measurements });
-    } catch (error) {
-      console.error('Erro ao processar o arquivo CSV:', error);
-      res.status(500).send('Erro ao processar o arquivo CSV.');
+        if (!equipment) {
+          equipment = await prisma.equipment.create({
+            data: {
+              id: equipmentId,
+              name: `Equipment ${equipmentId}`,
+              description: `Description - ${equipmentId}`,
+            },
+          });
+        }
+          
+        // Validar e converter timestamp
+        let dateTimestamp;
+        try {
+            dateTimestamp = new Date(timestamp);
+            if (isNaN(dateTimestamp.getTime())) {
+            throw new Error('Invalid timestamp format.');
+            }
+        } catch (error) {
+            console.error(`Invalid timestamp: ${timestamp}`);
+            continue; // Skip this record or handle the error
+        }
+
+        // Validar e converter valor
+        let numericValue;
+        try {
+            numericValue = parseFloat(value);
+            if (isNaN(numericValue)) {
+            throw new Error('Invalid value format.');
+            }
+        } catch (error) {
+            console.error(`Invalid value: ${value}`);
+            continue;
+        }
+
+        try {
+            const measurement = await prisma.measurement.create({
+            data: {
+                equipmentId,
+                timestamp: dateTimestamp,
+                value: numericValue
+            }
+            });
+            measurements.push(measurement);
+        } catch (error: any) {
+            console.error(`Erro ao salvar a medição no banco de dados: ${error.message}`);
+            continue; // Skip this record or handle the error
+        }
     }
-  });
+
+    fs.unlinkSync(csvFile.path);
+    res.status(201).json({ message: 'Dados do CSV processados e armazenados com sucesso', measurements });
+  } catch (error) {
+    console.error('Erro ao processar o arquivo CSV:', error);
+    res.status(500).send('Erro ao processar o arquivo CSV.');
+  }
 };

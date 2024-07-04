@@ -5,11 +5,11 @@ const prisma = new PrismaClient();
 
 export const receiveSensorData: ApiHandler = async ({ request, response }) => {
   console.log('Recebendo dados do sensor');
-  console.log({ request });
 
   try {
     const { equipmentId, timestamp, value } = request.body;
 
+    console.log({ equipmentId, timestamp, value });
     // Verifica se o equipamento existe
     let equipment = await prisma.equipment.findUnique({
       where: { id: equipmentId },
