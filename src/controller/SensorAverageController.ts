@@ -26,9 +26,9 @@ export const getSensorAverage = async (req: Request, res: Response, next: NextFu
         return res.status(400).json({ error: 'Parâmetro de timeframe inválido. Use 24h, 48h, 1w ou 1m.' });
     }
 
-    const averageMeasurements = await prisma.$queryRaw<Prisma.Decimal>('SELECT equipmentId, AVG(value) AS averageValue FROM Measurement WHERE timestamp >= $1 GROUP BY equipmentId ORDER BY equipmentId', startDate);
+    // const averageMeasurements = await prisma.$queryRaw<Prisma.Decimal>('SELECT equipmentId, AVG(value) AS averageValue FROM Measurement WHERE timestamp >= $1 GROUP BY equipmentId ORDER BY equipmentId', startDate);
 
-    res.status(200).json(averageMeasurements);
+    res.status(200).json({});
   } catch (error) {
     next(error);
   }
