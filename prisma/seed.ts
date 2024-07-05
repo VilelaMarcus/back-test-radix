@@ -3,24 +3,17 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create equipment data
-  const equipment1 = await prisma.equipment.create({
-    data: {
-      id: 'EQ-001',
-      name: 'Drill',
-      description: 'Drilling equipment',
-    },
-  });
+  for (let i = 1; i <= 10; i++) {
+    await prisma.equipment.create({
+      data: {
+        id: `EQ-00${i}`,
+        name: `Equipment ${i}`,
+        description: `Equipment ${i}`, // Add a description property
+      },
+    });
+  }
 
-  const equipment2 = await prisma.equipment.create({
-    data: {
-      id: 'EQ-002',
-      name: 'Pump',
-      description: 'Pumping equipment',
-    },
-  });
-
-  // Create user data
+  // Create user data (if needed)
   await prisma.user.createMany({
     data: [
       { firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com' },
@@ -29,11 +22,24 @@ async function main() {
   });
 
   // Create measurement data
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - 1); // 1 month ago
+
+  const measurementData: { value: number; timestamp: Date; equipmentId: string; }[] = [];
+  for (let i = 0; i < 30; i++) {
+    const randomEquipmentId = Math.floor(Math.random() * 10) + 1; // Random equipment ID between 1 and 10
+    const randomTimestamp = new Date(startDate);
+    randomTimestamp.setDate(randomTimestamp.getDate() + i); // Increment days
+
+    measurementData.push({
+      value: Math.random() * 1000, // Random value
+      timestamp: randomTimestamp,
+      equipmentId: `EQ-00${randomEquipmentId}`, // Adjust based on your equipment IDs
+    });
+  }
+
   await prisma.measurement.createMany({
-    data: [
-      { value: 100.5, timestamp: new Date(), equipmentId: equipment1.id },
-      { value: 150.2, timestamp: new Date(), equipmentId: equipment2.id },
-    ],
+    data: measurementData,
   });
 
   console.log('Seed data created successfully.');

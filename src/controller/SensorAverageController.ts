@@ -1,13 +1,20 @@
-import { Request, Response, NextFunction } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+
+import { HttpError } from '../utils/errors';
+import { ApiHandler } from '../utils/types';
 
 const prisma = new PrismaClient();
 
 // Controlador para obter valor médio dos sensores
-export const getSensorAverage = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { timeframe } = req.query;
+export const getSensorAverage: ApiHandler = async ({ request, response }): Promise<void> => {
+    const { timeframe, sensor } = request.query;
+    console.log({timeframe, sensor });
+
     let startDate: Date;
+
+    if (timeframe === null) {
+      throw new HttpError(404, 'Not found');
+    }
 
     switch (timeframe) {
       case '24h':
@@ -23,13 +30,17 @@ export const getSensorAverage = async (req: Request, res: Response, next: NextFu
         startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         break;
       default:
-        return res.status(400).json({ error: 'Parâmetro de timeframe inválido. Use 24h, 48h, 1w ou 1m.' });
+        response.status(400).json({ error: 'Parâmetro de timeframe inválido. Use 24h, 48h, 1w ou 1m.' });
+        return;
     }
+    
+    console.log('Data de início:', startDate);
+    console.log('Equipamento selecionado:', sensor);
 
-    // const averageMeasurements = await prisma.$queryRaw<Prisma.Decimal>('SELECT equipmentId, AVG(value) AS averageValue FROM Measurement WHERE timestamp >= $1 GROUP BY equipmentId ORDER BY equipmentId', startDate);
+    const averageMeasurements = await prisma.$queryRaw<String[]>`SELECT * FROM public."Measurement" WHERE "equipmentId" = ${sensor} AND timestamp >= ${startDate}`;
+    console.log({averageMeasurements});
+    console.log('Calculando média dos valores...');
 
-    res.status(200).json({});
-  } catch (error) {
-    next(error);
-  }
+    response.status(200).json(averageMeasurements);
+
 };
