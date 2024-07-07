@@ -16,8 +16,7 @@ export const uploadCsvController = async (req: any, res: any) => {
 
     for await (const record of parser) {
         const [equipmentId, timestamp, value] = record;        
-        console.log({ equipmentId, timestamp, value });
-        // Verifica se o equipamento existe, caso contrário, cria-o
+        
         let equipment = await prisma.equipment.findUnique({
           where: { id: equipmentId },
         });

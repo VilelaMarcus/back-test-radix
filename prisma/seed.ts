@@ -42,7 +42,6 @@ async function main() {
     data: measurementData,
   });
 
-  console.log('Seed data created successfully.');
 }
 
 main()

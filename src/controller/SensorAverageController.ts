@@ -8,7 +8,6 @@ const prisma = new PrismaClient();
 // Controlador para obter valor médio dos sensores
 export const getSensorAverage: ApiHandler = async ({ request, response }): Promise<void> => {
     const { timeframe, sensor } = request.query;
-    console.log({timeframe, sensor });
 
     let startDate: Date;
 
@@ -34,13 +33,8 @@ export const getSensorAverage: ApiHandler = async ({ request, response }): Promi
         return;
     }
     
-    console.log('Data de início:', startDate);
-    console.log('Equipamento selecionado:', sensor);
 
     const averageMeasurements = await prisma.$queryRaw<String[]>`SELECT * FROM public."Measurement" WHERE "equipmentId" = ${sensor} AND timestamp >= ${startDate}`;
-    console.log({averageMeasurements});
-    console.log('Calculando média dos valores...');
-
     response.status(200).json(averageMeasurements);
 
 };
