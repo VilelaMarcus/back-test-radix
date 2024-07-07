@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 import { HttpError } from '../utils/errors';
 import { ApiHandler } from '../utils/types';
@@ -15,6 +15,9 @@ export const getSensorAverage: ApiHandler = async ({ request, response }): Promi
       throw new HttpError(404, 'Not found');
     }
 
+    console.log('timeframe', timeframe);
+    console.log('sensor', sensor);
+    
     switch (timeframe) {
       case '24h':
         startDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
